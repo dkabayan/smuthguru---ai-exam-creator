@@ -17,7 +17,7 @@ export interface ExamConfig {
   countL1: number;
   countL2: number;
   countL3: number;
-  countEssay: number; 
+  countEssay: number;
   isHotsMode?: boolean;
 }
 
@@ -37,6 +37,7 @@ export interface QuestionItem {
   options?: string[]; // For Multiple Choice
   correctAnswer: string; // For Essay: Rubric/Main Answer
   explanation: string;
+  imageDescription?: string; // Optional description for an image
 }
 
 export type AppStep = 'config' | 'blueprint' | 'cards' | 'exam';

@@ -60,7 +60,8 @@ const questionsSchema: Schema = {
             description: "Array of options (A, B, C, D, E). KOSONGKAN array ini [] jika bentuk soal adalah Uraian."
           },
           correctAnswer: { type: Type.STRING, description: "Kunci jawaban (misal 'A' atau teks jawaban singkat). Jika Uraian, isi dengan poin-poin jawaban utama." },
-          explanation: { type: Type.STRING, description: "Pembahasan atau pedoman penskoran." }
+          explanation: { type: Type.STRING, description: "Pembahasan atau pedoman penskoran." },
+          imageDescription: { type: Type.STRING, description: "Deskripsi visual untuk gambar/diagram jika soal memerlukannya. Kosongkan jika tidak butuh gambar." }
         },
         required: ["blueprintId", "questionText", "correctAnswer", "explanation"]
       }
@@ -208,6 +209,10 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
     3. Jika bentuk soal 'Uraian': Kosongkan bagian 'options' (array kosong []). Isikan 'correctAnswer' dengan poin-poin jawaban utama atau rubrik singkat.
     4. Untuk L3 (Penalaran)/HOTS: Pastikan ada stimulus (data/kasus/cerita) di awal soal.
     5. 'explanation' berisi pembahasan atau pedoman penskoran.
+    6. **GAMBAR & TABEL**:
+       - Jika soal membutuhkan tabel, gunakan format Markdown Table standar di dalam 'questionText'.
+       - Jika soal membutuhkan gambar/diagram/grafik, berikan deskripsi detail di field 'imageDescription'. Contoh: "Sebuah grafik batang menunjukkan kenaikan suhu dari 20C ke 80C selama 5 menit."
+       - Jangan gunakan tag HTML <img>, gunakan field khusus 'imageDescription'.
 
     Kisi-kisi (JSON):
     ${JSON.stringify(blueprint)}

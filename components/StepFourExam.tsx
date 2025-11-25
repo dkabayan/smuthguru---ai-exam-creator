@@ -70,7 +70,8 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
         ...q,
         options: newOptions,
         correctAnswer: `${newCorrectLetter}. ${optionsWithFlag[newCorrectIndex].text}`,
-        explanation: q.explanation
+        explanation: q.explanation,
+        imageDescription: q.imageDescription
       };
     });
   }, [questions]);
@@ -95,7 +96,13 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       const safeText = (text: string) => text.replace(/([{}~=#:])/g, "\\$1").replace(/\n/g, " ");
 
       giftContent += `::Soal ${idx + 1}:: `;
-      giftContent += `${safeText(q.questionText)} {\n`;
+
+      let qText = q.questionText;
+      if (q.imageDescription) {
+        qText = `[IMAGE DESCRIPTION: ${q.imageDescription}] ` + qText;
+      }
+
+      giftContent += `${safeText(qText)} {\n`;
 
       if (!isEssay && q.options && q.options.length > 0) {
         q.options.forEach((opt, i) => {
@@ -156,6 +163,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           <tr>
             <td class="num">${idx + 1}.</td>
             <td class="content">
+              ${q.imageDescription ? `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>` : ''}
               <div dir="auto">${q.questionText.replace(/\n/g, '<br/>')}</div>
       `;
 
@@ -186,6 +194,86 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     downloadFile(header + content + footer, `Naskah_Soal_${config.subject.replace(/\s+/g, '_')}.doc`, 'application/msword');
   };
 
+  const handleDownloadXML = () => {
+    let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n`;
+
+    // Add a category
+    xmlContent += `
+  <question type="category">
+    <category>
+      <text>$course$/top/Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}</text>
+    </category>
+  </question>
+`;
+
+    shuffledQuestions.forEach((q, idx) => {
+      const isEssay = !q.options || q.options.length === 0;
+      const type = isEssay ? 'essay' : 'multichoice';
+      const name = `Soal ${idx + 1}`;
+
+      // Prepare Question Text with Image and Tables
+      let qTextHtml = "";
+      if (q.imageDescription) {
+        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+      }
+      // Convert newlines to <br> for basic formatting if not using a markdown parser here
+      // For better table support, we'd ideally parse markdown to HTML. 
+      // For now, we'll assume the user might want raw markdown or simple text.
+      // Let's do a simple replacement for newlines.
+      qTextHtml += q.questionText.replace(/\n/g, '<br/>');
+
+      xmlContent += `
+  <question type="${type}">
+    <name>
+      <text>${name}</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[${qTextHtml}]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text><![CDATA[${q.explanation}]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+`;
+
+      if (type === 'multichoice') {
+        xmlContent += `    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n`;
+
+        q.options!.forEach((opt, i) => {
+          const optionLetter = String.fromCharCode(65 + i);
+          const keyLetter = q.correctAnswer.trim().toUpperCase().charAt(0);
+          const isCorrect = keyLetter === optionLetter;
+          const fraction = isCorrect ? "100" : "0";
+
+          xmlContent += `
+    <answer fraction="${fraction}" format="html">
+      <text><![CDATA[${opt}]]></text>
+      <feedback format="html">
+        <text></text>
+      </feedback>
+    </answer>
+`;
+        });
+      } else {
+        // Essay
+        xmlContent += `
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <graderinfo format="html">
+      <text><![CDATA[${q.correctAnswer}]]></text>
+    </graderinfo>
+`;
+      }
+
+      xmlContent += `  </question>\n`;
+    });
+
+    xmlContent += `</quiz>`;
+    downloadFile(xmlContent, `Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}.xml`, 'text/xml');
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 gap-4 no-print">
@@ -208,6 +296,9 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           </button>
           <button onClick={handleDownloadGIFT} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
             <span>⬇</span> Unduh .GIFT (Moodle)
+          </button>
+          <button onClick={handleDownloadXML} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center gap-2 shadow-sm">
+            <span>⬇</span> Unduh .XML (Moodle)
           </button>
           <button onClick={onBack} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium border border-gray-200">
             &larr; Kembali
@@ -239,6 +330,13 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
                 <div className="flex gap-3">
                   <span className="font-bold text-lg min-w-[24px]">{idx + 1}.</span>
                   <div className="flex-1">
+                    {q.imageDescription && (
+                      <div className="mb-4 p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center">
+                        <span className="text-4xl mb-2">🖼️</span>
+                        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Ilustrasi Gambar</p>
+                        <p className="text-gray-700 mt-1 italic">"{q.imageDescription}"</p>
+                      </div>
+                    )}
                     <div dir="auto" className="text-lg text-gray-800 mb-3 leading-relaxed">
                       <LatexRenderer text={q.questionText} />
                     </div>
