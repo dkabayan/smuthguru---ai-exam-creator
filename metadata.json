@@ -1,0 +1,5 @@
+{
+  "name": "SMUTHGuru - AI Exam Creator",
+  "description": "Aplikasi penyusun soal ujian otomatis berbasis AI untuk guru. Mencakup penyusunan Kisi-kisi, Kartu Soal, dan Naskah Soal dengan tingkatan kognitif (L1, L2, L3).",
+  "requestFramePermissions": []
+}
