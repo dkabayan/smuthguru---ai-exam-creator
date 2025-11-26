@@ -38,6 +38,7 @@ export interface QuestionItem {
   correctAnswer: string; // For Essay: Rubric/Main Answer
   explanation: string;
   imageDescription?: string; // Optional description for an image
+  mermaidCode?: string; // Optional Mermaid code for diagrams
 }
 
 export type AppStep = 'config' | 'blueprint' | 'cards' | 'exam';

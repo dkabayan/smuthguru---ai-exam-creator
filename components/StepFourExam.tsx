@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ExamConfig, QuestionItem } from '../types';
 import LatexRenderer from './LatexRenderer';
+import MermaidRenderer from './MermaidRenderer';
 
 interface Props {
   config: ExamConfig;
@@ -330,13 +331,16 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
                 <div className="flex gap-3">
                   <span className="font-bold text-lg min-w-[24px]">{idx + 1}.</span>
                   <div className="flex-1">
-                    {q.imageDescription && (
-                      <div className="mb-4 p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center">
-                        <span className="text-4xl mb-2">🖼️</span>
-                        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Ilustrasi Gambar</p>
-                        <p className="text-gray-700 mt-1 italic">"{q.imageDescription}"</p>
+                    {q.mermaidCode ? (
+                      <div className="mb-4 overflow-x-auto">
+                        <MermaidRenderer chart={q.mermaidCode} />
                       </div>
-                    )}
+                    ) : q.imageDescription ? (
+                      <div className="mb-4 p-3 bg-gray-50 border-l-4 border-gray-300 rounded-r text-sm text-gray-600 italic">
+                        <span className="font-semibold not-italic mr-1">[Ilustrasi Gambar]:</span>
+                        {q.imageDescription}
+                      </div>
+                    ) : null}
                     <div dir="auto" className="text-lg text-gray-800 mb-3 leading-relaxed">
                       <LatexRenderer text={q.questionText} />
                     </div>

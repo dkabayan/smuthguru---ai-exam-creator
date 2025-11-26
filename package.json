@@ -14,10 +14,12 @@
     "@types/katex": "^0.16.7",
     "dompurify": "^3.3.0",
     "katex": "^0.16.25",
+    "mermaid": "^11.12.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0"
   },

@@ -61,7 +61,8 @@ const questionsSchema: Schema = {
           },
           correctAnswer: { type: Type.STRING, description: "Kunci jawaban (misal 'A' atau teks jawaban singkat). Jika Uraian, isi dengan poin-poin jawaban utama." },
           explanation: { type: Type.STRING, description: "Pembahasan atau pedoman penskoran." },
-          imageDescription: { type: Type.STRING, description: "Deskripsi visual untuk gambar/diagram jika soal memerlukannya. Kosongkan jika tidak butuh gambar." }
+          imageDescription: { type: Type.STRING, description: "Deskripsi visual untuk gambar/diagram jika soal memerlukannya. Kosongkan jika tidak butuh gambar." },
+          mermaidCode: { type: Type.STRING, description: "Kode Mermaid JS untuk diagram/grafik/flowchart jika soal memerlukannya. Contoh: 'graph TD; A-->B;'. Kosongkan jika tidak butuh diagram." }
         },
         required: ["blueprintId", "questionText", "correctAnswer", "explanation"]
       }
@@ -195,7 +196,10 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
     2. Untuk KIMIA: WAJIB gunakan format mhchem "$\\ce{...}$". 
        Contoh yang BENAR: $\\ce{H2O}$, $\\ce{H2SO4}$, $\\ce{Na+ + Cl- -> NaCl}$.
        Contoh yang SALAH: $H_2O$ (ini akan miring).
-    3. Untuk rumus yang panjang atau kompleks (seperti reaksi kimia lengkap atau persamaan integral), gunakan mode display ($$...$$) agar tampil di tengah dan lebih jelas.
+    3. Untuk rumus yang panjang atau kompleks (seperti reaksi kimia lengkap atau persamaan integral), gunakan mode display ($$...$$).
+    4. **WAJIB**: Berikan SPASI sebelum dan sesudah tanda $ atau $$. Jangan menempelkan rumus dengan kata-kata.
+       Contoh SALAH: "Maka$x=5$adalah..."
+       Contoh BENAR: "Maka $x=5$ adalah..."
   `;
 
   if (config.materialText) {
@@ -211,8 +215,34 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
     5. 'explanation' berisi pembahasan atau pedoman penskoran.
     6. **GAMBAR & TABEL**:
        - Jika soal membutuhkan tabel, gunakan format Markdown Table standar di dalam 'questionText'.
-       - Jika soal membutuhkan gambar/diagram/grafik, berikan deskripsi detail di field 'imageDescription'. Contoh: "Sebuah grafik batang menunjukkan kenaikan suhu dari 20C ke 80C selama 5 menit."
-       - Jangan gunakan tag HTML <img>, gunakan field khusus 'imageDescription'.
+       - **PENTING**:
+         1. Pastikan setiap baris tabel dipisahkan oleh karakter baris baru (\\n).
+         2. Baris pemisah header (|---|---|) HARUS dalam SATU BARIS saja. Jangan dipecah menjadi beberapa baris.
+         Contoh BENAR:
+         | Kolom 1 | Kolom 2 |
+         |---|---|
+         | Data 1 | Data 2 |
+         Contoh SALAH (Jangan lakukan ini):
+         | Kolom 1 | Kolom 2 |
+         |---|
+         |---|
+         | Data 1 | Data 2 |
+        - **PENTING**: Jika materi sumber memuat TABEL, JANGAN gunakan field 'imageDescription'. SALIN ULANG tabel tersebut ke dalam format Markdown Table di dalam 'questionText'.
+        - **GRAFIK/DIAGRAM**: Jika grafik/diagram bisa dijelaskan dengan kata-kata (misal: "Grafik fungsi f(x) mendekati 8 dari kiri..."), TULISKAN deskripsi tersebut langsung di dalam 'questionText'.
+        - Gunakan field 'imageDescription' HANYA jika soal benar-benar membutuhkan visual murni yang tidak bisa dijelaskan dengan teks (misal: foto spesifik, lukisan, atau diagram yang sangat kompleks).
+        - **SANGAT DISARANKAN**: Jika gambar berupa diagram alur, siklus, grafik sederhana, atau struktur, GUNAKAN field 'mermaidCode' untuk membuat diagram visual.
+       - **ATURAN MERMAID**:
+         1. Gunakan 'graph TD' atau 'graph LR'.
+         2. **WAJIB**: Apit semua label node dengan tanda kutip dua ("..."), terutama jika mengandung spasi, kurung (), atau karakter khusus lain.
+            Contoh SALAH: A[Plastida (Kloroplas)]
+       - Contoh Mermaid:
+         \`\`\`mermaid
+         graph TD;
+             A["Mulai"] --> B{"Keputusan (Ya/Tidak)"};
+             B -- "Ya" --> C["Proses A (Lanjut)"];
+             B -- "Tidak" --> D["Selesai"];
+         \`\`\`
+       - Jangan gunakan tag HTML <img>.
 
     Kisi-kisi (JSON):
     ${JSON.stringify(blueprint)}
