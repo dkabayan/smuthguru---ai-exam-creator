@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOMServer from 'react-dom/server';
 import { BlueprintItem, QuestionItem } from '../types';
 import LatexRenderer from './LatexRenderer';
 import MermaidRenderer from './MermaidRenderer';
@@ -14,25 +15,53 @@ interface Props {
 
 const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack, isLoading, onUpdateLevel }) => {
 
-  const handleDownloadDocx = () => {
+  const handleDownloadDocxImages = () => {
     const header = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>Kartu Soal</title>
+        <title>Kartu Soal (Images)</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
         <style>
           body { font-family: 'Arial', sans-serif; font-size: 11pt; }
           .card-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid black; page-break-inside: avoid; }
           .card-table td { border: 1px solid black; padding: 8px; vertical-align: top; }
           .header-row td { background-color: #e0e0e0; font-weight: bold; }
           .label { font-weight: bold; width: 150px; }
+          img { vertical-align: middle; }
         </style>
       </head>
       <body>
         <h2 style="text-align:center;">KUMPULAN KARTU SOAL</h2>
+        <p style="text-align:center; font-size: 8pt; color: #888;">(Generated v3 - Images)</p>
     `;
 
     let content = "";
+
+    // Helper to replace LaTeX with Images
+    const latexToImg = (text: string) => {
+      if (!text) return "";
+      // Replace $$...$$ (display math)
+      let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+        const encoded = encodeURIComponent(tex.trim());
+        return `<br/><img src="https://latex.codecogs.com/png.latex?\\dpi{150}\\large ${encoded}" /><br/>`;
+      });
+      // Replace $...$ (inline math)
+      processed = processed.replace(/\$([\s\S]*?)\$/g, (match, tex) => {
+        const encoded = encodeURIComponent(tex.trim());
+        return `<img src="https://latex.codecogs.com/png.latex?\\dpi{120} ${encoded}" />`;
+      });
+      // Replace newlines
+      return processed.replace(/\n/g, '<br/>');
+    };
 
     questions.forEach((q, idx) => {
       const bp = blueprint.find(b => b.id === q.blueprintId) || blueprint[idx];
@@ -64,20 +93,127 @@ const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack,
           <tr>
             <td colspan="2" style="padding: 15px;">
               <b>Butir Soal:</b><br/><br/>
-              <div dir="auto">${q.questionText.replace(/\n/g, '<br/>')}</div>
+              <div dir="auto">${latexToImg(q.questionText)}</div>
               <br/><br/>
               ${!isEssay && q.options ? q.options.map((opt, i) =>
-        `<div dir="auto">${String.fromCharCode(65 + i)}. ${opt.replace(/^[A-E]\.\s*/, '')}</div>`
+        `<div dir="auto">${String.fromCharCode(65 + i)}. ${latexToImg(opt.replace(/^[A-E]\.\s*/, ''))}</div>`
       ).join('') : '<i>(Soal Uraian - Siswa menulis jawaban pada lembar jawab)</i>'}
             </td>
           </tr>
           <tr>
             <td class="label">${isEssay ? 'Kunci / Rubrik' : 'Kunci Jawaban'}</td>
-            <td><b dir="auto">${q.correctAnswer}</b></td>
+            <td><b dir="auto">${latexToImg(q.correctAnswer)}</b></td>
           </tr>
            <tr>
             <td class="label">Pembahasan</td>
-            <td dir="auto">${q.explanation}</td>
+            <td dir="auto">${latexToImg(q.explanation)}</td>
+          </tr>
+        </table>
+        <br/>
+      `;
+    });
+
+    const footer = `</body></html>`;
+    const fullContent = header + content + footer;
+
+    const blob = new Blob([fullContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Kartu_Soal_Img.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadDocx = () => {
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns:mml='http://www.w3.org/1998/Math/MathML' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Kartu Soal</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Arial', sans-serif; font-size: 11pt; }
+          .card-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid black; page-break-inside: avoid; }
+          .card-table td { border: 1px solid black; padding: 8px; vertical-align: top; }
+          .header-row td { background-color: #e0e0e0; font-weight: bold; }
+          .label { font-weight: bold; width: 150px; }
+        </style>
+      </head>
+      <body>
+        <h2 style="text-align:center;">KUMPULAN KARTU SOAL</h2>
+        <p style="text-align:center; font-size: 8pt; color: #888;">(Generated v2)</p>
+    `;
+
+    let content = "";
+
+    questions.forEach((q, idx) => {
+      const bp = blueprint.find(b => b.id === q.blueprintId) || blueprint[idx];
+      if (!bp) return;
+
+      const isEssay = bp.questionForm === 'Uraian' || !q.options || q.options.length === 0;
+
+      // Render components to static HTML string
+      const cleanHtml = (html: string) => {
+        return html
+          .replace(/<annotation encoding="application\/x-tex">.*?<\/annotation>/g, '')
+          .replace(/<\/?semantics>/g, '')
+          .replace(/\u2061/g, '') // Remove invisible function application character
+          .replace(/<span class="katex">\s*(<math[\s\S]*?<\/math>)\s*<\/span>/g, '$1'); // Unwrap span.katex
+      };
+
+      const questionHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.questionText} output="mathml" />));
+      const answerHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.correctAnswer} output="mathml" />));
+      const explanationHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.explanation} output="mathml" />));
+
+      content += `
+        <table class="card-table">
+          <tr class="header-row">
+            <td colspan="2">Kartu Soal Nomor: ${bp.questionNumber} (${bp.questionForm})</td>
+          </tr>
+          <tr>
+            <td class="label">Kompetensi Dasar</td>
+            <td>${bp.basicCompetency}</td>
+          </tr>
+           <tr>
+            <td class="label">Materi</td>
+            <td>${bp.material}</td>
+          </tr>
+          <tr>
+            <td class="label">Indikator Soal</td>
+            <td>${bp.indicator}</td>
+          </tr>
+          <tr>
+            <td class="label">Level Kognitif</td>
+            <td>${bp.level}</td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding: 15px;">
+              <b>Butir Soal:</b><br/><br/>
+              <div dir="auto">${questionHtml}</div>
+              <br/><br/>
+              ${!isEssay && q.options ? q.options.map((opt, i) => {
+        const optHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={opt.replace(/^[A-E]\.\s*/, '')} output="mathml" />));
+        return `<div dir="auto">${String.fromCharCode(65 + i)}. ${optHtml}</div>`;
+      }).join('') : '<i>(Soal Uraian - Siswa menulis jawaban pada lembar jawab)</i>'}
+            </td>
+          </tr>
+          <tr>
+            <td class="label">${isEssay ? 'Kunci / Rubrik' : 'Kunci Jawaban'}</td>
+            <td><b dir="auto">${answerHtml}</b></td>
+           </tr>
+           <tr>
+            <td class="label">Pembahasan</td>
+            <td dir="auto">${explanationHtml}</td>
           </tr>
         </table>
         <br/>
@@ -116,7 +252,10 @@ const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack,
         </h2>
         <div className="flex gap-3 flex-wrap justify-end">
           <button onClick={handleDownloadDocx} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
-            <span>📄</span> Unduh .docx
+            <span>📄</span> Unduh .doc
+          </button>
+          <button onClick={handleDownloadDocxImages} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium flex items-center gap-2 shadow-sm">
+            <span>🖼️</span> Unduh .doc (Gambar)
           </button>
           <button onClick={onBack} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium">
             &larr; Lihat Kisi-kisi

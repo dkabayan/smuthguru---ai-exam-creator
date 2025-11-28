@@ -9,9 +9,10 @@ import 'katex/dist/contrib/mhchem';
 
 interface Props {
   text: string;
+  output?: 'html' | 'mathml';
 }
 
-const LatexRenderer: React.FC<Props> = ({ text }) => {
+const LatexRenderer: React.FC<Props> = ({ text, output = 'html' }) => {
   // Preprocess text to fix common Markdown table issues
   const preprocessText = (rawText: string) => {
     if (!rawText) return "";
@@ -51,11 +52,16 @@ const LatexRenderer: React.FC<Props> = ({ text }) => {
 
   const cleanText = preprocessText(text);
 
+  const rehypePlugins = [
+    [rehypeKatex, { output: output }] as any,
+    rehypeRaw
+  ];
+
   return (
     <div className="prose prose-blue max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeRaw]}
+        rehypePlugins={rehypePlugins}
         components={{
           // Custom components if needed, e.g. for tables to add styling
           table: ({ node, ...props }) => <div className="overflow-x-auto my-4"><table className="min-w-full divide-y divide-gray-200 border border-collapse" {...props} /></div>,

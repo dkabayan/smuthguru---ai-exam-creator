@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 interface Props {
     chart: string;
@@ -33,17 +35,24 @@ const MermaidRenderer: React.FC<Props> = ({ chart }) => {
                     if (codeMatch) {
                         cleanChart = codeMatch[1];
                     }
-                }
-                cleanChart = cleanChart.trim();
-
-                // Auto-fix common syntax errors (e.g., unquoted parentheses in nodes)
-                const sanitizeMermaidCode = (code: string) => {
-                    // Fix: A[Text (With Parens)] -> A["Text (With Parens)"]
-                    // Matches content inside [], (), {}, >] that contains ( or ) but isn't already quoted
-                    return code.replace(/([\[\(\{\>])\s*([^"\[\]\(\)\{\}]+?[\(\)][^"\[\]\(\)\{\}]+?)\s*([\]\)\}\]])/g, '$1"$2"$3');
+                    return code.replace(/\$([^\$]+)\$/g, (match, latex) => {
+                        try {
+                            const rendered = katex.renderToString(latex, {
+                                throwOnError: false,
+                                output: 'html',
+                                displayMode: false
+                            });
+                            // Escape quotes for mermaid
+                            return rendered.replace(/"/g, "'");
+                        } catch (e) {
+                            console.error("KaTeX error:", e);
+                            return match;
+                        }
+                    });
                 };
 
                 cleanChart = sanitizeMermaidCode(cleanChart);
+                cleanChart = renderLatexInMermaid(cleanChart);
 
                 const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
                 const { svg } = await mermaid.render(id, cleanChart);

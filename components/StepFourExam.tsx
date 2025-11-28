@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ReactDOMServer from 'react-dom/server';
 import { ExamConfig, QuestionItem } from '../types';
 import LatexRenderer from './LatexRenderer';
 import MermaidRenderer from './MermaidRenderer';
@@ -130,12 +131,114 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     downloadFile(bom + giftContent, `Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}.gift.txt`, 'text/plain;charset=utf-8');
   };
 
-  const handleDownloadDocx = () => {
+  const handleDownloadDocxImages = () => {
     const header = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
+        <title>Naskah Soal (Images)</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+          .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
+          table.q-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          td.num { width: 30px; vertical-align: top; }
+          td.content { vertical-align: top; }
+          .opt-table { width: 100%; margin-top: 5px; }
+          .opt-letter { width: 25px; vertical-align: top; }
+          img { vertical-align: middle; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <p>NASKAH SOAL UJIAN</p>
+          <p>Mata Pelajaran: ${config.subject}</p>
+          <p>Kelas: ${config.grade}</p>
+          <p style="font-size: 8pt; color: #888; margin-top: 5px;">(Generated v3 - Images)</p>
+        </div>
+    `;
+
+    let content = "";
+
+    // Helper to replace LaTeX with Images
+    const latexToImg = (text: string) => {
+      if (!text) return "";
+      // Replace $$...$$ (display math)
+      let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+        const encoded = encodeURIComponent(tex.trim());
+        return `<br/><img src="https://latex.codecogs.com/png.latex?\\dpi{150}\\large ${encoded}" /><br/>`;
+      });
+      // Replace $...$ (inline math)
+      processed = processed.replace(/\$([\s\S]*?)\$/g, (match, tex) => {
+        const encoded = encodeURIComponent(tex.trim());
+        return `<img src="https://latex.codecogs.com/png.latex?\\dpi{120} ${encoded}" />`;
+      });
+      // Replace newlines
+      return processed.replace(/\n/g, '<br/>');
+    };
+
+    shuffledQuestions.forEach((q, idx) => {
+      const isEssay = !q.options || q.options.length === 0;
+
+      content += `
+        <table class="q-table">
+          <tr>
+            <td class="num">${idx + 1}.</td>
+            <td class="content">
+              ${q.imageDescription ? `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>` : ''}
+              <div dir="auto">${latexToImg(q.questionText)}</div>
+      `;
+
+      if (!isEssay && q.options && q.options.length > 0) {
+        content += `<table class="opt-table">`;
+        q.options.forEach((opt, i) => {
+          content += `
+              <tr>
+                <td class="opt-letter">${String.fromCharCode(65 + i)}.</td>
+                <td dir="auto">${latexToImg(opt)}</td>
+              </tr>
+            `;
+        });
+        content += `</table>`;
+      } else {
+        // Essay lines
+        content += `<br/><br/><hr/><br/><br/>`;
+      }
+
+      content += `
+            </td>
+          </tr>
+        </table>
+      `;
+    });
+
+    const footer = `</body></html>`;
+    downloadFile(header + content + footer, `Naskah_Soal_${config.subject.replace(/\s+/g, '_')}_Img.doc`, 'application/msword');
+  };
+
+  const handleDownloadDocx = () => {
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns:mml='http://www.w3.org/1998/Math/MathML' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
         <title>Naskah Soal</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
         <style>
           body { font-family: 'Times New Roman', serif; font-size: 12pt; }
           .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
@@ -151,6 +254,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           <p>NASKAH SOAL UJIAN</p>
           <p>Mata Pelajaran: ${config.subject}</p>
           <p>Kelas: ${config.grade}</p>
+          <p style="font-size: 8pt; color: #888; margin-top: 5px;">(Generated v2)</p>
         </div>
     `;
 
@@ -159,22 +263,34 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     shuffledQuestions.forEach((q, idx) => {
       const isEssay = !q.options || q.options.length === 0;
 
+      // Render components to static HTML string
+      const cleanHtml = (html: string) => {
+        return html
+          .replace(/<annotation encoding="application\/x-tex">.*?<\/annotation>/g, '')
+          .replace(/<\/?semantics>/g, '')
+          .replace(/\u2061/g, '') // Remove invisible function application character
+          .replace(/<span class="katex">\s*(<math[\s\S]*?<\/math>)\s*<\/span>/g, '$1'); // Unwrap span.katex
+      };
+
+      const questionHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.questionText} output="mathml" />));
+
       content += `
         <table class="q-table">
           <tr>
             <td class="num">${idx + 1}.</td>
             <td class="content">
               ${q.imageDescription ? `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>` : ''}
-              <div dir="auto">${q.questionText.replace(/\n/g, '<br/>')}</div>
+              <div dir="auto">${questionHtml}</div>
       `;
 
       if (!isEssay && q.options && q.options.length > 0) {
         content += `<table class="opt-table">`;
         q.options.forEach((opt, i) => {
+          const optHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={opt} output="mathml" />));
           content += `
               <tr>
                 <td class="opt-letter">${String.fromCharCode(65 + i)}.</td>
-                <td dir="auto">${opt}</td>
+                <td dir="auto">${optHtml}</td>
               </tr>
             `;
         });
@@ -294,6 +410,9 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           </button>
           <button onClick={handleDownloadDocx} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm">
             <span>📄</span> Unduh .doc (Word)
+          </button>
+          <button onClick={handleDownloadDocxImages} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium flex items-center gap-2 shadow-sm">
+            <span>🖼️</span> Unduh .doc (Gambar)
           </button>
           <button onClick={handleDownloadGIFT} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
             <span>⬇</span> Unduh .GIFT (Moodle)
