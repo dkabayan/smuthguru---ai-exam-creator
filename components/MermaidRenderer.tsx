@@ -21,6 +21,29 @@ const MermaidRenderer: React.FC<Props> = ({ chart }) => {
     }, []);
 
     useEffect(() => {
+        const sanitizeMermaidCode = (code: string) => {
+            // Remove any potential harmful characters or fix common syntax issues
+            // For now, just trimming
+            return code.trim();
+        };
+
+        const renderLatexInMermaid = (code: string) => {
+            return code.replace(/\$([^\$]+)\$/g, (match, latex) => {
+                try {
+                    const rendered = katex.renderToString(latex, {
+                        throwOnError: false,
+                        output: 'html',
+                        displayMode: false
+                    });
+                    // Escape quotes for mermaid and remove newlines
+                    return rendered.replace(/"/g, "'").replace(/\n/g, ' ');
+                } catch (e) {
+                    console.error("KaTeX error:", e);
+                    return match;
+                }
+            });
+        };
+
         const renderChart = async () => {
             if (!chart || !ref.current) return;
 
@@ -35,21 +58,7 @@ const MermaidRenderer: React.FC<Props> = ({ chart }) => {
                     if (codeMatch) {
                         cleanChart = codeMatch[1];
                     }
-                    return code.replace(/\$([^\$]+)\$/g, (match, latex) => {
-                        try {
-                            const rendered = katex.renderToString(latex, {
-                                throwOnError: false,
-                                output: 'html',
-                                displayMode: false
-                            });
-                            // Escape quotes for mermaid
-                            return rendered.replace(/"/g, "'");
-                        } catch (e) {
-                            console.error("KaTeX error:", e);
-                            return match;
-                        }
-                    });
-                };
+                }
 
                 cleanChart = sanitizeMermaidCode(cleanChart);
                 cleanChart = renderLatexInMermaid(cleanChart);

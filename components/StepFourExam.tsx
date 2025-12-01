@@ -3,6 +3,7 @@ import ReactDOMServer from 'react-dom/server';
 import { ExamConfig, QuestionItem } from '../types';
 import LatexRenderer from './LatexRenderer';
 import MermaidRenderer from './MermaidRenderer';
+import katex from 'katex';
 
 interface Props {
   config: ExamConfig;
@@ -12,6 +13,7 @@ interface Props {
 
 const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
   const [showKey, setShowKey] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   // Memoize shuffled questions so they don't reshuffle on re-renders
   const shuffledQuestions = useMemo(() => {
@@ -78,6 +80,10 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     });
   }, [questions]);
 
+  const sanitizeFilename = (text: string) => {
+    return text.replace(/[^a-z0-9\-_]/gi, '_').replace(/_+/g, '_');
+  };
+
   const downloadFile = (content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
@@ -128,7 +134,88 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
 
     // Add BOM for UTF-8 recognition
     const bom = "\uFEFF";
-    downloadFile(bom + giftContent, `Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}.gift.txt`, 'text/plain;charset=utf-8');
+    const filename = `Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}.gift.txt`;
+    downloadFile(bom + giftContent, filename, 'text/plain;charset=utf-8');
+  };
+
+  // Helper to convert Markdown tables to HTML
+  const markdownTableToHtml = (text: string) => {
+    if (!text) return "";
+
+    // Regex to detect markdown tables
+    // Matches blocks of lines that start and end with | (allowing for whitespace)
+    // Uses multiline flag to match start of lines
+    const tableBlockRegex = /((?:^\s*\|.*\|\s*(?:\r?\n|$))+)/gm;
+
+    return text.replace(tableBlockRegex, (match) => {
+      const lines = match.trim().split(/\r?\n/);
+      if (lines.length < 2) return match;
+
+      // Validate separator line (index 1)
+      // It must contain only |, -, :, and whitespace
+      const separatorLine = lines[1].trim();
+      const invalidChars = separatorLine.replace(/[|\-\s:]/g, '');
+      if (invalidChars.length > 0 || !separatorLine.includes('-')) return match;
+
+      let html = '<table border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 10px;">';
+
+      const processRow = (line: string, isHeader: boolean) => {
+        // Split by pipe, but handle leading/trailing pipes correctly
+        // e.g. "| a | b |" should result in ["a", "b"]
+        let cells = line.trim().split('|');
+        // Remove first empty element if line starts with pipe
+        if (line.trim().startsWith('|') && cells.length > 0 && cells[0] === '') cells.shift();
+        // Remove last empty element if line ends with pipe
+        if (line.trim().endsWith('|') && cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+
+        let rowHtml = '<tr>';
+        cells.forEach(c => {
+          const tag = isHeader ? 'th' : 'td';
+          const style = isHeader
+            ? 'border: 1px solid #999; padding: 8px; background-color: #f2f2f2; font-weight: bold;'
+            : 'border: 1px solid #999; padding: 8px;';
+          rowHtml += `<${tag} style="${style}">${c.trim()}</${tag}>`;
+        });
+        rowHtml += '</tr>';
+        return rowHtml;
+      };
+
+      // Header
+      html += '<thead>' + processRow(lines[0], true) + '</thead>';
+      html += '<tbody>';
+
+      // Body (skip separator line at index 1)
+      for (let i = 2; i < lines.length; i++) {
+        html += processRow(lines[i], false);
+      }
+
+      html += '</tbody></table>';
+      return html;
+    });
+  };
+
+  // Helper to replace LaTeX with Images
+  const latexToImg = (text: string) => {
+    if (!text) return "";
+    let processed = text;
+
+    // Convert Markdown tables first
+    processed = markdownTableToHtml(processed);
+
+    // Replace $$...$$ (display math)
+    processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+      const encoded = encodeURIComponent(tex.trim());
+      // Use explicit encoding for backslashes if needed, but encodeURIComponent usually handles it.
+      // CodeCogs sometimes prefers %5C for backslash.
+      return `<br/><img src="https://latex.codecogs.com/png.latex?\\dpi{150}\\large ${encoded}" /><br/>`;
+    });
+    // Replace $...$ (inline math)
+    processed = processed.replace(/\$([\s\S]*?)\$/g, (match, tex) => {
+      const encoded = encodeURIComponent(tex.trim());
+      return `<img src="https://latex.codecogs.com/png.latex?\\dpi{120} ${encoded}" />`;
+    });
+    // Replace newlines
+    return processed.replace(/\n/g, '<br/>');
   };
 
   const handleDownloadDocxImages = () => {
@@ -168,23 +255,6 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
 
     let content = "";
 
-    // Helper to replace LaTeX with Images
-    const latexToImg = (text: string) => {
-      if (!text) return "";
-      // Replace $$...$$ (display math)
-      let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
-        const encoded = encodeURIComponent(tex.trim());
-        return `<br/><img src="https://latex.codecogs.com/png.latex?\\dpi{150}\\large ${encoded}" /><br/>`;
-      });
-      // Replace $...$ (inline math)
-      processed = processed.replace(/\$([\s\S]*?)\$/g, (match, tex) => {
-        const encoded = encodeURIComponent(tex.trim());
-        return `<img src="https://latex.codecogs.com/png.latex?\\dpi{120} ${encoded}" />`;
-      });
-      // Replace newlines
-      return processed.replace(/\n/g, '<br/>');
-    };
-
     shuffledQuestions.forEach((q, idx) => {
       const isEssay = !q.options || q.options.length === 0;
 
@@ -221,7 +291,8 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     });
 
     const footer = `</body></html>`;
-    downloadFile(header + content + footer, `Naskah_Soal_${config.subject.replace(/\s+/g, '_')}_Img.doc`, 'application/msword');
+    const filename = `Naskah_Soal_${sanitizeFilename(config.subject)}_Img.doc`;
+    downloadFile(header + content + footer, filename, 'application/msword');
   };
 
   const handleDownloadDocx = () => {
@@ -308,7 +379,8 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     });
 
     const footer = `</body></html>`;
-    downloadFile(header + content + footer, `Naskah_Soal_${config.subject.replace(/\s+/g, '_')}.doc`, 'application/msword');
+    const filename = `Naskah_Soal_${sanitizeFilename(config.subject)}.doc`;
+    downloadFile(header + content + footer, filename, 'application/msword');
   };
 
   const handleDownloadXML = () => {
@@ -318,10 +390,41 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     xmlContent += `
   <question type="category">
     <category>
-      <text>$course$/top/Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}</text>
+      <text>$course$/top/Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}</text>
     </category>
   </question>
 `;
+
+    // Helper to format text for Moodle:
+    // 1. Preserve $$...$$ (Display Math) - Moodle native filter supports this
+    // 2. Replace $...$ with \(...\) (Inline Math)
+    // 3. Convert Markdown tables to HTML
+    // 4. Replace newlines with <br/>
+    const formatForMoodle = (text: string) => {
+      if (!text) return "";
+      let processed = text;
+
+      // Convert Markdown tables first
+      processed = markdownTableToHtml(processed);
+
+      // We need to be careful not to touch $$...$$ when replacing $...$
+      // Strategy: Split by $$...$$ and only process the parts outside
+
+      const parts = processed.split(/(\$\$[\s\S]*?\$\$)/g);
+
+      processed = parts.map((part, index) => {
+        // If it's a $$...$$ block (odd index), return as is
+        if (index % 2 === 1) return part;
+
+        // Otherwise, process inline math $...$ -> \(...\)
+        return part.replace(/\$([\s\S]*?)\$/g, '\\($1\\)');
+      }).join('');
+
+      // Replace newlines with <br/>
+      processed = processed.replace(/\n/g, '<br/>');
+
+      return processed;
+    };
 
     shuffledQuestions.forEach((q, idx) => {
       const isEssay = !q.options || q.options.length === 0;
@@ -333,11 +436,8 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       if (q.imageDescription) {
         qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
       }
-      // Convert newlines to <br> for basic formatting if not using a markdown parser here
-      // For better table support, we'd ideally parse markdown to HTML. 
-      // For now, we'll assume the user might want raw markdown or simple text.
-      // Let's do a simple replacement for newlines.
-      qTextHtml += q.questionText.replace(/\n/g, '<br/>');
+
+      qTextHtml += formatForMoodle(q.questionText);
 
       xmlContent += `
   <question type="${type}">
@@ -348,7 +448,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       <text><![CDATA[${qTextHtml}]]></text>
     </questiontext>
     <generalfeedback format="html">
-      <text><![CDATA[${q.explanation}]]></text>
+      <text><![CDATA[${formatForMoodle(q.explanation)}]]></text>
     </generalfeedback>
     <defaultgrade>1.0000000</defaultgrade>
     <penalty>0.3333333</penalty>
@@ -366,7 +466,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
 
           xmlContent += `
     <answer fraction="${fraction}" format="html">
-      <text><![CDATA[${opt}]]></text>
+      <text><![CDATA[${formatForMoodle(opt)}]]></text>
       <feedback format="html">
         <text></text>
       </feedback>
@@ -379,7 +479,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     <responseformat>editor</responseformat>
     <responserequired>1</responserequired>
     <graderinfo format="html">
-      <text><![CDATA[${q.correctAnswer}]]></text>
+      <text><![CDATA[${formatForMoodle(q.correctAnswer)}]]></text>
     </graderinfo>
 `;
       }
@@ -388,7 +488,203 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     });
 
     xmlContent += `</quiz>`;
-    downloadFile(xmlContent, `Soal_${config.subject.replace(/\s+/g, '_')}_${config.grade.replace(/\s+/g, '_')}.xml`, 'text/xml');
+    const filename = `Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}.xml`;
+    downloadFile(xmlContent, filename, 'text/xml');
+  };
+
+  const handleDownloadXMLImages = () => {
+    let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n`;
+
+    // Add a category
+    xmlContent += `
+  <question type="category">
+    <category>
+      <text>$course$/top/Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}_Img</text>
+    </category>
+  </question>
+`;
+
+    shuffledQuestions.forEach((q, idx) => {
+      const isEssay = !q.options || q.options.length === 0;
+      const type = isEssay ? 'essay' : 'multichoice';
+      const name = `Soal ${idx + 1}`;
+
+      // Prepare Question Text with Image and Tables
+      let qTextHtml = "";
+      if (q.imageDescription) {
+        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+      }
+
+      // Use latexToImg instead of formatForMoodle
+      qTextHtml += latexToImg(q.questionText);
+
+      xmlContent += `
+  <question type="${type}">
+    <name>
+      <text>${name}</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[${qTextHtml}]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text><![CDATA[${latexToImg(q.explanation)}]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+`;
+
+      if (type === 'multichoice') {
+        xmlContent += `    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n`;
+
+        q.options!.forEach((opt, i) => {
+          const optionLetter = String.fromCharCode(65 + i);
+          const keyLetter = q.correctAnswer.trim().toUpperCase().charAt(0);
+          const isCorrect = keyLetter === optionLetter;
+          const fraction = isCorrect ? "100" : "0";
+
+          xmlContent += `
+    <answer fraction="${fraction}" format="html">
+      <text><![CDATA[${latexToImg(opt)}]]></text>
+      <feedback format="html">
+        <text></text>
+      </feedback>
+    </answer>
+`;
+        });
+      } else {
+        // Essay
+        xmlContent += `
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <graderinfo format="html">
+      <text><![CDATA[${latexToImg(q.correctAnswer)}]]></text>
+    </graderinfo>
+`;
+      }
+
+      xmlContent += `  </question>\n`;
+    });
+
+    xmlContent += `</quiz>`;
+    const filename = `Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}_Img.xml`;
+    downloadFile(xmlContent, filename, 'text/xml');
+  };
+
+  const handleDownloadXMLMathML = () => {
+    let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n`;
+
+    // Add a category
+    xmlContent += `
+  <question type="category">
+    <category>
+      <text>$course$/top/Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}_MathML</text>
+    </category>
+  </question>
+`;
+
+    // Helper to convert LaTeX to MathML
+    const latexToMathML = (text: string) => {
+      if (!text) return "";
+      let processed = text;
+
+      // Convert Markdown tables first
+      processed = markdownTableToHtml(processed);
+
+      // Replace $$...$$ (display math)
+      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+        try {
+          return katex.renderToString(tex.trim(), {
+            throwOnError: false,
+            output: 'mathml',
+            displayMode: true
+          });
+        } catch (e) {
+          return match;
+        }
+      });
+
+      // Replace $...$ (inline math)
+      processed = processed.replace(/\$([\s\S]*?)\$/g, (match, tex) => {
+        try {
+          return katex.renderToString(tex.trim(), {
+            throwOnError: false,
+            output: 'mathml',
+            displayMode: false
+          });
+        } catch (e) {
+          return match;
+        }
+      });
+
+      // Replace newlines
+      return processed.replace(/\n/g, '<br/>');
+    };
+
+    shuffledQuestions.forEach((q, idx) => {
+      const isEssay = !q.options || q.options.length === 0;
+      const type = isEssay ? 'essay' : 'multichoice';
+      const name = `Soal ${idx + 1}`;
+
+      // Prepare Question Text
+      let qTextHtml = "";
+      if (q.imageDescription) {
+        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+      }
+
+      qTextHtml += latexToMathML(q.questionText);
+
+      xmlContent += `
+  <question type="${type}">
+    <name>
+      <text>${name}</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[${qTextHtml}]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text><![CDATA[${latexToMathML(q.explanation)}]]></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+`;
+
+      if (type === 'multichoice') {
+        xmlContent += `    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n`;
+
+        q.options!.forEach((opt, i) => {
+          const optionLetter = String.fromCharCode(65 + i);
+          const keyLetter = q.correctAnswer.trim().toUpperCase().charAt(0);
+          const isCorrect = keyLetter === optionLetter;
+          const fraction = isCorrect ? "100" : "0";
+
+          xmlContent += `
+    <answer fraction="${fraction}" format="html">
+      <text><![CDATA[${latexToMathML(opt)}]]></text>
+      <feedback format="html">
+        <text></text>
+      </feedback>
+    </answer>
+`;
+        });
+      } else {
+        // Essay
+        xmlContent += `
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <graderinfo format="html">
+      <text><![CDATA[${latexToMathML(q.correctAnswer)}]]></text>
+    </graderinfo>
+`;
+      }
+
+      xmlContent += `  </question>\n`;
+    });
+
+    xmlContent += `</quiz>`;
+    const filename = `Soal_${sanitizeFilename(config.subject)}_${sanitizeFilename(config.grade)}_MathML.xml`;
+    downloadFile(xmlContent, filename, 'text/xml');
   };
 
   return (
@@ -401,28 +697,54 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           </h2>
           <p className="text-sm text-gray-500 ml-10 mt-1">Siap dicetak atau diekspor ke LMS.</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-2 flex-wrap justify-end items-center relative">
+          <button onClick={onBack} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium border border-gray-200 mr-auto md:mr-2">
+            &larr; Kembali
+          </button>
+
           <button
             onClick={() => setShowKey(!showKey)}
             className={`px-4 py-2 rounded-lg font-medium border transition ${showKey ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-gray-600 border-gray-300'}`}
           >
             {showKey ? 'Sembunyikan Kunci' : 'Tampilkan Kunci'}
           </button>
-          <button onClick={handleDownloadDocx} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm">
-            <span>📄</span> Unduh .doc (Word)
-          </button>
-          <button onClick={handleDownloadDocxImages} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium flex items-center gap-2 shadow-sm">
-            <span>🖼️</span> Unduh .doc (Gambar)
-          </button>
-          <button onClick={handleDownloadGIFT} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
-            <span>⬇</span> Unduh .GIFT (Moodle)
-          </button>
-          <button onClick={handleDownloadXML} className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center gap-2 shadow-sm">
-            <span>⬇</span> Unduh .XML (Moodle)
-          </button>
-          <button onClick={onBack} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium border border-gray-200">
-            &larr; Kembali
-          </button>
+
+          {/* Download Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm"
+            >
+              <span>⬇</span> Unduh Naskah <span>▼</span>
+            </button>
+
+            {showDownloadMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="py-1">
+                  <button onClick={() => { handleDownloadDocx(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>📄</span> Unduh .doc (Word)
+                  </button>
+                  <button onClick={() => { handleDownloadDocxImages(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>🖼️</span> Unduh .doc (Gambar)
+                  </button>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <button onClick={() => { handleDownloadGIFT(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>⬇</span> Unduh .GIFT (Moodle)
+                  </button>
+                  <button onClick={() => { handleDownloadXML(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>⬇</span> Unduh .XML (Moodle)
+                  </button>
+                  <button onClick={() => { handleDownloadXMLImages(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>🖼️</span> Unduh .XML (Moodle Img)
+                  </button>
+                  <button onClick={() => { handleDownloadXMLMathML(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>∑</span> Unduh .XML (Moodle MathML)
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => window.print()} className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium shadow-sm">
             🖨 Cetak
           </button>
