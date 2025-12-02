@@ -40,6 +40,9 @@ const LatexRenderer: React.FC<Props> = ({ text, output = 'html' }) => {
     // Ensure $$ (display math) is always on its own line
     processed = processed.replace(/(\$\$)/g, '\n$1\n');
 
+    // Replace \dots with ellipsis ...
+    processed = processed.replace(/\\dots/g, '...');
+
     // Collapse multiple newlines (including lines with only whitespace) into max 2
     processed = processed.replace(/\n\s*\n/g, '\n\n');
     processed = processed.replace(/\n{3,}/g, '\n\n');

@@ -138,16 +138,34 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     downloadFile(bom + giftContent, filename, 'text/plain;charset=utf-8');
   };
 
+  // Helper to preprocess text for common formatting issues
+  const preprocessText = (text: string) => {
+    if (!text) return "";
+    let processed = text;
+
+    // 1. Ensure table starts on new line if following a colon (common AI artifact)
+    processed = processed.replace(/:\s*(\|)/g, ":\n$1");
+
+    // 2. Fix compressed table rows (|| -> |\n|)
+    // Require space after || to avoid math norms like ||x|| (unless spaced)
+    processed = processed.replace(/\|\s*\|\s+/g, "|\n| ");
+
+    return processed;
+  };
+
   // Helper to convert Markdown tables to HTML
   const markdownTableToHtml = (text: string) => {
     if (!text) return "";
+
+    // Preprocess text to fix table formatting issues
+    const processedText = preprocessText(text);
 
     // Regex to detect markdown tables
     // Matches blocks of lines that start and end with | (allowing for whitespace)
     // Uses multiline flag to match start of lines
     const tableBlockRegex = /((?:^\s*\|.*\|\s*(?:\r?\n|$))+)/gm;
 
-    return text.replace(tableBlockRegex, (match) => {
+    return processedText.replace(tableBlockRegex, (match) => {
       const lines = match.trim().split(/\r?\n/);
       if (lines.length < 2) return match;
 
@@ -263,7 +281,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           <tr>
             <td class="num">${idx + 1}.</td>
             <td class="content">
-              ${q.imageDescription ? `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>` : ''}
+              ${q.imageDescription ? `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>` : ''}
               <div dir="auto">${latexToImg(q.questionText)}</div>
       `;
 
@@ -350,7 +368,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
           <tr>
             <td class="num">${idx + 1}.</td>
             <td class="content">
-              ${q.imageDescription ? `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>` : ''}
+              ${q.imageDescription ? `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>` : ''}
               <div dir="auto">${questionHtml}</div>
       `;
 
@@ -434,7 +452,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       // Prepare Question Text with Image and Tables
       let qTextHtml = "";
       if (q.imageDescription) {
-        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+        qTextHtml += `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>`;
       }
 
       qTextHtml += formatForMoodle(q.questionText);
@@ -512,7 +530,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       // Prepare Question Text with Image and Tables
       let qTextHtml = "";
       if (q.imageDescription) {
-        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+        qTextHtml += `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>`;
       }
 
       // Use latexToImg instead of formatForMoodle
@@ -629,7 +647,7 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
       // Prepare Question Text
       let qTextHtml = "";
       if (q.imageDescription) {
-        qTextHtml += `<div style="border:1px dashed #999; padding:10px; margin-bottom:10px; background:#f9f9f9;"><em><strong>[IMAGE]</strong> ${q.imageDescription}</em></div>`;
+        qTextHtml += `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>`;
       }
 
       qTextHtml += latexToMathML(q.questionText);

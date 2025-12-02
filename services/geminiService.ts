@@ -191,14 +191,17 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
     - Khusus Bahasa Inggris: Boleh full Bahasa Inggris jika levelnya lanjut, namun default gunakan campuran (Instruksi Indo, Konten Inggris) jika ragu.
     - Untuk pelajaran Sains/Sosial konteks Indonesia, gunakan Bahasa Indonesia.
     
-    PENTING - FORMAT RUMUS & SAINS:
-    1. Untuk MATEMATIKA / FISIKA: Gunakan format LaTeX biasa yang diapit tanda dolar ($...$). Contoh: $E=mc^2$.
-    2. Untuk KIMIA: WAJIB gunakan format mhchem "$\\ce{...}$". 
-       Contoh yang BENAR: $\\ce{H2O}$, $\\ce{H2SO4}$, $\\ce{Na+ + Cl- -> NaCl}$.
-       Contoh yang SALAH: $H_2O$ (ini akan miring).
-    3. Untuk rumus yang panjang atau kompleks (seperti reaksi kimia lengkap atau persamaan integral), gunakan mode display ($$...$$).
-    4. **WAJIB**: Berikan SPASI sebelum dan sesudah tanda $ atau $$. Jangan menempelkan rumus dengan kata-kata.
-       Contoh SALAH: "Maka$x=5$adalah..."
+    PENTING - FORMAT RUMUS & SAINS (JSON ESCAPING):
+    1. Karena output adalah JSON, Anda WAJIB melakukan DOUBLE ESCAPING untuk backslash (\\).
+       - JANGAN tulis: "\frac{1}{2}" (ini akan error atau hilang backslash-nya).
+       - TULISLAH: "\\frac{1}{2}" (gunakan dua backslash).
+       - Contoh: "\\lim_{x \\to 0}", "\\text{...}", "\\ce{H2O}".
+    2. Untuk MATEMATIKA / FISIKA: Gunakan format LaTeX biasa yang diapit tanda dolar ($...$). 
+       Contoh: $E=mc^2$.
+    3. Untuk KIMIA: WAJIB gunakan format mhchem "$\\ce{...}$". 
+       Contoh yang BENAR: "$\\ce{H2O}$", "$\\ce{H2SO4}$".
+    4. Untuk rumus yang panjang atau kompleks, gunakan mode display ($$...$$).
+    5. **WAJIB**: Berikan SPASI sebelum dan sesudah tanda $ atau $$. Jangan menempelkan rumus dengan kata-kata.
        Contoh BENAR: "Maka $x=5$ adalah..."
   `;
 
