@@ -7,6 +7,7 @@ export enum CognitiveLevel {
 export interface ExamConfig {
   subject: string;
   grade: string;
+  learningObjective: string; // [NEW] Capaian Pembelajaran
   materialText: string;
   materialFile?: {
     data: string; // Base64 string
@@ -23,7 +24,7 @@ export interface ExamConfig {
 
 export interface BlueprintItem {
   id: number;
-  basicCompetency: string;
+  learningObjective: string; // [RENAMED] from basicCompetency
   material: string;
   indicator: string;
   level: "L1" | "L2" | "L3";
@@ -42,3 +43,11 @@ export interface QuestionItem {
 }
 
 export type AppStep = 'config' | 'blueprint' | 'cards' | 'exam';
+
+export interface ExportData {
+  step: AppStep;
+  config: ExamConfig | null;
+  blueprint: BlueprintItem[];
+  questions: QuestionItem[];
+  timestamp: string;
+}

@@ -23,8 +23,16 @@ const MermaidRenderer: React.FC<Props> = ({ chart }) => {
     useEffect(() => {
         const sanitizeMermaidCode = (code: string) => {
             // Remove any potential harmful characters or fix common syntax issues
-            // For now, just trimming
-            return code.trim();
+            // Remove class definitions like :::bar1 which cause parsing errors
+            let clean = code.replace(/:::\w+/g, '');
+            // Remove classDef statements
+            clean = clean.replace(/classDef\s+\w+\s+[^;]+;/g, '');
+
+            // Auto-quote unquoted labels: A[Text] -> A["Text"]
+            // Match [Text] where Text doesn't start with " and doesn't contain ]
+            clean = clean.replace(/\[([^"\]][^\]]*)\]/g, '["$1"]');
+
+            return clean.trim();
         };
 
         const renderLatexInMermaid = (code: string) => {

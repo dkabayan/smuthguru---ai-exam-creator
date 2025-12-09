@@ -401,6 +401,136 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     downloadFile(header + content + footer, filename, 'application/msword');
   };
 
+  const handleDownloadDocxWithKey = () => {
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns:mml='http://www.w3.org/1998/Math/MathML' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Naskah Soal & Kunci</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+          .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
+          table.q-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          td.num { width: 30px; vertical-align: top; }
+          td.content { vertical-align: top; }
+          .opt-table { width: 100%; margin-top: 5px; }
+          .opt-letter { width: 25px; vertical-align: top; }
+          .page-break { page-break-before: always; }
+          .key-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          .key-table td, .key-table th { border: 1px solid #000; padding: 5px; text-align: left; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <p>NASKAH SOAL UJIAN</p>
+          <p>Mata Pelajaran: ${config.subject}</p>
+          <p>Kelas: ${config.grade}</p>
+          <p style="font-size: 8pt; color: #888; margin-top: 5px;">(Generated v2)</p>
+        </div>
+    `;
+
+    let content = "";
+
+    shuffledQuestions.forEach((q, idx) => {
+      const isEssay = !q.options || q.options.length === 0;
+
+      // Render components to static HTML string
+      const cleanHtml = (html: string) => {
+        return html
+          .replace(/<annotation encoding="application\/x-tex">.*?<\/annotation>/g, '')
+          .replace(/<\/?semantics>/g, '')
+          .replace(/\u2061/g, '') // Remove invisible function application character
+          .replace(/<span class="katex">\s*(<math[\s\S]*?<\/math>)\s*<\/span>/g, '$1'); // Unwrap span.katex
+      };
+
+      const questionHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.questionText} output="mathml" />));
+
+      content += `
+        <table class="q-table">
+          <tr>
+            <td class="num">${idx + 1}.</td>
+            <td class="content">
+              ${q.imageDescription ? `<div style="text-align:center; margin-bottom:15px; padding:10px; border:1px solid #ddd; background-color:#f8f9fa; border-radius:4px;"><p style="margin:0; font-style:italic; color:#555;"><strong>Ilustrasi Gambar:</strong> ${q.imageDescription}</p></div>` : ''}
+              <div dir="auto">${questionHtml}</div>
+      `;
+
+      if (!isEssay && q.options && q.options.length > 0) {
+        content += `<table class="opt-table">`;
+        q.options.forEach((opt, i) => {
+          const optHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={opt} output="mathml" />));
+          content += `
+              <tr>
+                <td class="opt-letter">${String.fromCharCode(65 + i)}.</td>
+                <td dir="auto">${optHtml}</td>
+              </tr>
+            `;
+        });
+        content += `</table>`;
+      } else {
+        // Essay lines
+        content += `<br/><br/><hr/><br/><br/>`;
+      }
+
+      content += `
+            </td>
+          </tr>
+        </table>
+      `;
+    });
+
+    // Append Answer Key
+    content += `
+      <div class="page-break"></div>
+      <div class="header">
+        <p>KUNCI JAWABAN</p>
+      </div>
+      <table class="key-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">No.</th>
+            <th>Jawaban / Poin Penting</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    shuffledQuestions.forEach((q, idx) => {
+      const cleanHtml = (html: string) => {
+        return html
+          .replace(/<annotation encoding="application\/x-tex">.*?<\/annotation>/g, '')
+          .replace(/<\/?semantics>/g, '')
+          .replace(/\u2061/g, '')
+          .replace(/<span class="katex">\s*(<math[\s\S]*?<\/math>)\s*<\/span>/g, '$1');
+      };
+      const answerHtml = cleanHtml(ReactDOMServer.renderToStaticMarkup(<LatexRenderer text={q.correctAnswer} output="mathml" />));
+
+      content += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${answerHtml}</td>
+          </tr>
+        `;
+    });
+
+    content += `
+        </tbody>
+      </table>
+    `;
+
+    const footer = `</body></html>`;
+    const filename = `Naskah_Soal_${sanitizeFilename(config.subject)}_Plus_Kunci.doc`;
+    downloadFile(header + content + footer, filename, 'application/msword');
+  };
+
   const handleDownloadXML = () => {
     let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n`;
 
@@ -741,6 +871,9 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
                 <div className="py-1">
                   <button onClick={() => { handleDownloadDocx(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
                     <span>📄</span> Unduh .doc (Word)
+                  </button>
+                  <button onClick={() => { handleDownloadDocxWithKey(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span>🔑</span> Unduh .doc (Dengan Kunci)
                   </button>
                   <button onClick={() => { handleDownloadDocxImages(); setShowDownloadMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
                     <span>🖼️</span> Unduh .doc (Gambar)

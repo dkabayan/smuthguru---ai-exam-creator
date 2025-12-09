@@ -21,6 +21,9 @@ const LatexRenderer: React.FC<Props> = ({ text, output = 'html' }) => {
     // Match the ENTIRE separator row (e.g. |---|---|) including spaces
     let processed = rawText.replace(/([^\n])\s*((?:\|\s*:?-+:?\s*)+\|)\s*([^\n])/g, '$1\n$2\n$3');
 
+    // Ensure separator row is always on a new line if it follows a pipe (header end)
+    processed = processed.replace(/(\|\s*)\s*((?:\|\s*:?-+:?\s*)+\|)/g, '$1\n$2');
+
     // Also ensure newlines before the table starts if it's jammed against text
     processed = processed.replace(/([^\n])\s*(\|.*\|)\s*(\n\|\s*:?-+:?\s*\|)/g, '$1\n$2$3');
 

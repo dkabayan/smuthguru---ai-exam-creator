@@ -4,7 +4,7 @@ import StepTwoBlueprint from './components/StepTwoBlueprint';
 import StepThreeCards from './components/StepThreeCards';
 import StepFourExam from './components/StepFourExam';
 import ApiKeyInput from './components/ApiKeyInput';
-import { AppStep, BlueprintItem, ExamConfig, QuestionItem } from './types';
+import { AppStep, BlueprintItem, ExamConfig, QuestionItem, ExportData } from './types';
 import { generateBlueprint, generateQuestions } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -89,6 +89,66 @@ const App: React.FC = () => {
     ));
   };
 
+  const handleSaveDatabase = () => {
+    const data: ExportData = {
+      step,
+      config,
+      blueprint,
+      questions,
+      timestamp: new Date().toISOString()
+    };
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `smuthguru_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRestoreDatabase = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        const data: ExportData = JSON.parse(json);
+
+        if (data.step && (data.config || data.config === null)) {
+          setConfig(data.config);
+          setBlueprint(data.blueprint || []);
+          setQuestions(data.questions || []);
+          setStep(data.step);
+          alert("Database berhasil dipulihkan!");
+        } else {
+          throw new Error("Format file tidak valid");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Gagal memulihkan database: File rusak atau format salah.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input value to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  // Handle Home Button
+  const handleHome = () => {
+    if (step === 'config') return; // Already at home
+
+    if (window.confirm("Apakah Anda yakin ingin kembali ke menu utama? Progress saat ini (Setting, Kisi-kisi, Soal) akan dihapus.")) {
+      setStep('config');
+      setConfig(null);
+      setBlueprint([]);
+      setQuestions([]);
+    }
+  };
+
   // If no API Key is set, show the Input Screen
   if (!apiKey) {
     return <ApiKeyInput onSetKey={handleSetKey} />;
@@ -120,13 +180,41 @@ const App: React.FC = () => {
                 <span className={step === 'exam' ? 'text-blue-600' : ''}>4. Naskah</span>
               </div>
 
-              <button
-                onClick={handleClearKey}
-                className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 px-2 py-1 rounded transition"
-                title="Hapus API Key dan Keluar"
-              >
-                Keluar / Ganti Key
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleHome}
+                  className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded transition flex items-center gap-1"
+                  title="Kembali ke Menu Utama"
+                >
+                  <span className="text-sm">🏠</span>
+                  Home
+                </button>
+                <button
+                  onClick={handleSaveDatabase}
+                  className="text-xs bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 px-3 py-1 rounded transition flex items-center gap-1"
+                  title="Simpan progress saat ini ke file JSON"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Simpan
+                </button>
+                <label className="text-xs bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-200 px-3 py-1 rounded transition flex items-center gap-1 cursor-pointer" title="Muat progress dari file JSON">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Muat
+                  <input type="file" accept=".json" onChange={handleRestoreDatabase} className="hidden" />
+                </label>
+
+                <button
+                  onClick={handleClearKey}
+                  className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 px-2 py-1 rounded transition"
+                  title="Hapus API Key dan Keluar"
+                >
+                  Keluar
+                </button>
+              </div>
             </div>
           </div>
         </div>

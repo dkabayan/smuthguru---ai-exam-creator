@@ -30,14 +30,14 @@ const blueprintSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           id: { type: Type.INTEGER },
-          basicCompetency: { type: Type.STRING },
+          learningObjective: { type: Type.STRING, description: "Capaian Pembelajaran (CP) / KD yang relevan" },
           material: { type: Type.STRING },
           indicator: { type: Type.STRING, description: "Indikator soal yang spesifik menggunakan kata kerja operasional" },
           level: { type: Type.STRING, enum: ["L1", "L2", "L3"] },
           questionForm: { type: Type.STRING, enum: ["Pilihan Ganda", "Uraian"] },
           questionNumber: { type: Type.INTEGER }
         },
-        required: ["id", "basicCompetency", "material", "indicator", "level", "questionForm", "questionNumber"]
+        required: ["id", "learningObjective", "material", "indicator", "level", "questionForm", "questionNumber"]
       }
     }
   }
@@ -95,6 +95,7 @@ export const generateBlueprint = async (config: ExamConfig, apiKey: string): Pro
     Mata Pelajaran: ${config.subject}
     Kelas: ${config.grade}
     Topik Utama: ${config.topic}
+    ${config.learningObjective ? `Capaian Pembelajaran (CP) / KD: ${config.learningObjective}` : ''}
     
     BAHASA OUTPUT:
     Deteksi bahasa utama dari materi atau topik. 
@@ -122,6 +123,7 @@ export const generateBlueprint = async (config: ExamConfig, apiKey: string): Pro
     2. Materi spesifik diambil dari konteks dokumen/teks yang diberikan.
     3. Level soal didistribusikan TEPAT sesuai permintaan jumlah di atas.
     4. Kolom 'questionForm' harus diisi 'Uraian' atau 'Pilihan Ganda' sesuai jumlah yang diminta.
+    5. Kolom 'learningObjective' harus diisi. Gunakan CP/KD yang diberikan user jika relevan, atau turunkan menjadi tujuan pembelajaran spesifik.
   `;
 
   if (config.isHotsMode) {
@@ -221,23 +223,26 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
        - **PENTING**:
          1. Pastikan setiap baris tabel dipisahkan oleh karakter baris baru (\\n).
          2. Baris pemisah header (|---|---|) HARUS dalam SATU BARIS saja. Jangan dipecah menjadi beberapa baris.
+         3. **JANGAN** gunakan syntax class \`:::className\` atau \`classDef\`. Ini sering menyebabkan error. Gunakan \`style A fill:#f9f,stroke:#333;\` jika ingin memberi warna.
+         4. **WAJIB**: Gunakan baris baru (\\n) untuk memisahkan setiap baris tabel. JANGAN menulis tabel dalam satu baris.
+         5. **WAJIB**: Baris pemisah header (|---|---|) harus berada di baris sendiri.
          Contoh BENAR:
          | Kolom 1 | Kolom 2 |
          |---|---|
          | Data 1 | Data 2 |
          Contoh SALAH (Jangan lakukan ini):
-         | Kolom 1 | Kolom 2 |
-         |---|
-         |---|
-         | Data 1 | Data 2 |
+         | Kolom 1 | Kolom 2 | |---|---| | Data 1 | Data 2 |
         - **PENTING**: Jika materi sumber memuat TABEL, JANGAN gunakan field 'imageDescription'. SALIN ULANG tabel tersebut ke dalam format Markdown Table di dalam 'questionText'.
         - **GRAFIK/DIAGRAM**: Jika grafik/diagram bisa dijelaskan dengan kata-kata (misal: "Grafik fungsi f(x) mendekati 8 dari kiri..."), TULISKAN deskripsi tersebut langsung di dalam 'questionText'.
         - Gunakan field 'imageDescription' HANYA jika soal benar-benar membutuhkan visual murni yang tidak bisa dijelaskan dengan teks (misal: foto spesifik, lukisan, atau diagram yang sangat kompleks).
         - **SANGAT DISARANKAN**: Jika gambar berupa diagram alur, siklus, grafik sederhana, atau struktur, GUNAKAN field 'mermaidCode' untuk membuat diagram visual.
        - **ATURAN MERMAID**:
          1. Gunakan 'graph TD' atau 'graph LR'.
-         2. **WAJIB**: Apit semua label node dengan tanda kutip dua ("..."), terutama jika mengandung spasi, kurung (), atau karakter khusus lain.
+         2. **WAJIB**: Apit semua label node dengan tanda kutip dua ("..."), TANPA KECUALI.
             Contoh SALAH: A[Plastida (Kloroplas)]
+            Contoh BENAR: A["Plastida (Kloroplas)"]
+         3. **JANGAN** gunakan syntax class \`:::className\` atau \`classDef\`. Ini sering menyebabkan error. Gunakan \`style A fill:#f9f,stroke:#333;\` jika ingin memberi warna.
+         4. **WAJIB**: Gunakan baris baru (\\n) untuk memisahkan setiap node/edge. Jangan menulis semua dalam satu baris.
        - Contoh Mermaid:
          \`\`\`mermaid
          graph TD;

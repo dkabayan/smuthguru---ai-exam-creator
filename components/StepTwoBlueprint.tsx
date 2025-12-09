@@ -53,10 +53,11 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
         <thead>
           <tr>
             <th style="width: 5%">No</th>
-            <th style="width: 25%">Kompetensi Dasar / Materi</th>
-            <th style="width: 40%">Indikator Soal</th>
-            <th style="width: 15%">Level Kognitif</th>
-            <th style="width: 15%">Bentuk Soal</th>
+            <th style="width: 25%">Capaian Pembelajaran</th>
+            <th style="width: 20%">Materi</th>
+            <th style="width: 25%">Indikator Soal</th>
+            <th style="width: 12%">Level Kognitif</th>
+            <th style="width: 13%">Bentuk Soal</th>
           </tr>
         </thead>
         <tbody>
@@ -66,10 +67,8 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
       tableContent += `
         <tr>
           <td style="text-align: center;">${item.questionNumber}</td>
-          <td>
-            <b>${item.basicCompetency}</b><br/>
-            ${item.material}
-          </td>
+          <td>${item.learningObjective}</td>
+          <td>${item.material}</td>
           <td>${item.indicator}</td>
           <td style="text-align: center;">${item.level}</td>
           <td style="text-align: center;">${item.questionForm}</td>
@@ -104,56 +103,56 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 gap-4">
-         <div>
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
-              Kisi-Kisi Soal
-            </h2>
-            <div className="ml-10 mt-1 text-sm text-gray-500 space-y-1">
-               <p><span className="font-semibold">Mapel:</span> {config.subject} ({config.grade})</p>
-               {config.materialFile && (
-                 <p className="flex items-center gap-1 text-blue-600">
-                   <span>📄</span> Sumber: <span className="font-medium">{config.materialFile.name}</span>
-                 </p>
-               )}
-               {config.isHotsMode && (
-                 <span className="inline-block mt-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-bold border border-orange-200">
-                    🔥 Mode HOTS Aktif
-                 </span>
-               )}
-            </div>
-         </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+            Kisi-Kisi Soal
+          </h2>
+          <div className="ml-10 mt-1 text-sm text-gray-500 space-y-1">
+            <p><span className="font-semibold">Mapel:</span> {config.subject} ({config.grade})</p>
+            {config.materialFile && (
+              <p className="flex items-center gap-1 text-blue-600">
+                <span>📄</span> Sumber: <span className="font-medium">{config.materialFile.name}</span>
+              </p>
+            )}
+            {config.isHotsMode && (
+              <span className="inline-block mt-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-bold border border-orange-200">
+                🔥 Mode HOTS Aktif
+              </span>
+            )}
+          </div>
+        </div>
         <div className="flex gap-3 w-full md:w-auto flex-wrap">
-            <button onClick={handleDownloadDocx} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
-              <span>📄</span> Unduh .docx
-            </button>
-            <button onClick={onBack} className="flex-1 md:flex-none px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium border border-gray-200 md:border-transparent">
-                &larr; Kembali
-            </button>
-            <button onClick={onNext} className="flex-1 md:flex-none px-6 py-2 bg-primary text-white rounded-lg font-bold shadow hover:bg-blue-700 transition">
-                Lanjut: Buat Soal &rarr;
-            </button>
+          <button onClick={handleDownloadDocx} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm">
+            <span>📄</span> Unduh .docx
+          </button>
+          <button onClick={onBack} className="flex-1 md:flex-none px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium border border-gray-200 md:border-transparent">
+            &larr; Kembali
+          </button>
+          <button onClick={onNext} className="flex-1 md:flex-none px-6 py-2 bg-primary text-white rounded-lg font-bold shadow hover:bg-blue-700 transition">
+            Lanjut: Buat Soal &rarr;
+          </button>
         </div>
       </div>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Soal</div>
-            <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-         </div>
-         <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm">
-            <div className="text-xs text-green-700 uppercase font-bold tracking-wider">Level 1 (Pemahaman)</div>
-            <div className="text-2xl font-bold text-green-800">{stats.L1}</div>
-         </div>
-         <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 shadow-sm">
-            <div className="text-xs text-yellow-700 uppercase font-bold tracking-wider">Level 2 (Aplikasi)</div>
-            <div className="text-2xl font-bold text-yellow-800">{stats.L2}</div>
-         </div>
-         <div className="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
-            <div className="text-xs text-red-700 uppercase font-bold tracking-wider">Level 3 (Penalaran)</div>
-            <div className="text-2xl font-bold text-red-800">{stats.L3}</div>
-         </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Soal</div>
+          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+        </div>
+        <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm">
+          <div className="text-xs text-green-700 uppercase font-bold tracking-wider">Level 1 (Pemahaman)</div>
+          <div className="text-2xl font-bold text-green-800">{stats.L1}</div>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 shadow-sm">
+          <div className="text-xs text-yellow-700 uppercase font-bold tracking-wider">Level 2 (Aplikasi)</div>
+          <div className="text-2xl font-bold text-yellow-800">{stats.L2}</div>
+        </div>
+        <div className="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
+          <div className="text-xs text-red-700 uppercase font-bold tracking-wider">Level 3 (Penalaran)</div>
+          <div className="text-2xl font-bold text-red-800">{stats.L3}</div>
+        </div>
       </div>
 
       {/* Table */}
@@ -163,7 +162,8 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
             <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 w-16">No</th>
-                <th className="px-6 py-3">Kompetensi Dasar & Materi</th>
+                <th className="px-6 py-3">Capaian Pembelajaran (CP)</th>
+                <th className="px-6 py-3">Materi</th>
                 <th className="px-6 py-3">Indikator Soal</th>
                 <th className="px-6 py-3 w-32">Level Kognitif</th>
                 <th className="px-6 py-3 w-32">Bentuk Soal</th>
@@ -180,8 +180,10 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
                   <tr key={item.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 font-medium text-center text-gray-500">{item.questionNumber}</td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{item.basicCompetency}</div>
-                      <div className="text-xs text-gray-500 mt-1">{item.material}</div>
+                      {item.learningObjective}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {item.material}
                     </td>
                     <td className="px-6 py-4 text-gray-700 italic">"{item.indicator}"</td>
                     <td className="px-6 py-4">
@@ -197,9 +199,9 @@ const StepTwoBlueprint: React.FC<Props> = ({ config, blueprint, onNext, onBack, 
           </table>
         </div>
         {blueprint.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-                Belum ada data kisi-kisi. Silakan kembali dan generate ulang.
-            </div>
+          <div className="p-8 text-center text-gray-500">
+            Belum ada data kisi-kisi. Silakan kembali dan generate ulang.
+          </div>
         )}
       </div>
     </div>
