@@ -17,9 +17,12 @@ const LatexRenderer: React.FC<Props> = ({ text, output = 'html' }) => {
   const preprocessText = (rawText: string) => {
     if (!rawText) return "";
 
+    // Fix literal \n (escaped newlines) from AI response
+    let processed = rawText.replace(/\\n/g, '\n');
+
     // Fix single-line tables: "Header | Header |---|---| Cell | Cell" -> "Header | Header \n |---|---| \n Cell | Cell"
     // Match the ENTIRE separator row (e.g. |---|---|) including spaces
-    let processed = rawText.replace(/([^\n])\s*((?:\|\s*:?-+:?\s*)+\|)\s*([^\n])/g, '$1\n$2\n$3');
+    processed = processed.replace(/([^\n])\s*((?:\|\s*:?-+:?\s*)+\|)\s*([^\n])/g, '$1\n$2\n$3');
 
     // Ensure separator row is always on a new line if it follows a pipe (header end)
     processed = processed.replace(/(\|\s*)\s*((?:\|\s*:?-+:?\s*)+\|)/g, '$1\n$2');

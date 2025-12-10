@@ -217,6 +217,9 @@ const StepFourExam: React.FC<Props> = ({ config, questions, onBack }) => {
     if (!text) return "";
     let processed = text;
 
+    // Fix literal \n
+    processed = processed.replace(/\\n/g, '\n');
+
     // Convert Markdown tables first
     processed = markdownTableToHtml(processed);
 

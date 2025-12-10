@@ -49,8 +49,11 @@ const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack,
     // Helper to replace LaTeX with Images
     const latexToImg = (text: string) => {
       if (!text) return "";
+      // Fix literal \n
+      let processed = text.replace(/\\n/g, '\n');
+
       // Replace $$...$$ (display math)
-      let processed = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
         const encoded = encodeURIComponent(tex.trim());
         return `<br/><img src="https://latex.codecogs.com/png.latex?\\dpi{150}\\large ${encoded}" /><br/>`;
       });
@@ -75,8 +78,8 @@ const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack,
             <td colspan="2">Kartu Soal Nomor: ${bp.questionNumber} (${bp.questionForm})</td>
           </tr>
           <tr>
-            <td class="label">Kompetensi Dasar</td>
-            <td>${bp.basicCompetency}</td>
+            <td class="label">Capaian Pembelajaran</td>
+            <td>${bp.learningObjective}</td>
           </tr>
            <tr>
             <td class="label">Materi</td>
@@ -181,8 +184,8 @@ const StepThreeCards: React.FC<Props> = ({ blueprint, questions, onNext, onBack,
             <td colspan="2">Kartu Soal Nomor: ${bp.questionNumber} (${bp.questionForm})</td>
           </tr>
           <tr>
-            <td class="label">Kompetensi Dasar</td>
-            <td>${bp.basicCompetency}</td>
+            <td class="label">Capaian Pembelajaran</td>
+            <td>${bp.learningObjective}</td>
           </tr>
            <tr>
             <td class="label">Materi</td>
