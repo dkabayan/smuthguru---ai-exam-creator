@@ -215,6 +215,8 @@ export const generateQuestions = async (config: ExamConfig, blueprint: Blueprint
     Instruksi Penting:
     1. Buat soal SANGAT SESUAI dengan indikator dan level kognitif di kisi-kisi.
     2. Jika bentuk soal 'Pilihan Ganda': Berikan 5 opsi (A, B, C, D, E).
+       - **PENTING**: Hindari bias panjang kalimat pada jawaban benar. Jangan biarkan jawaban benar menjadi opsi yang paling panjang secara mencolok sehingga mudah ditebak. Usahakan panjang kalimat antar opsi relatif seimbang.
+       - Gunakan kalimat yang tegas, lugas, dan tidak bertele-tele dalam pilihan jawaban.
     3. Jika bentuk soal 'Uraian': Kosongkan bagian 'options' (array kosong []). Isikan 'correctAnswer' dengan poin-poin jawaban utama atau rubrik singkat.
     4. Untuk L3 (Penalaran)/HOTS: Pastikan ada stimulus (data/kasus/cerita) di awal soal.
     5. 'explanation' berisi pembahasan atau pedoman penskoran.
